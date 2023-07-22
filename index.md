@@ -12,6 +12,8 @@ variables
 command
 command_combine
 command_group
+input
+arithmetic
 ```
 
 ## 索引と検索
