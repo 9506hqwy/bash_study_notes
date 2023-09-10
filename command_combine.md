@@ -21,4 +21,3 @@ cat <(echo test)
 ```sh
 >(CMD)
 ```
-
