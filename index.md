@@ -14,7 +14,10 @@ command_combine
 command_group
 input
 arithmetic
+regular_expression
 ```
+
+- [GNU Bash manual](https://www.gnu.org/software/bash/manual/)
 
 ## 索引と検索
 
