@@ -556,10 +556,71 @@ d
 sed: -e expression #1, char 4: 無効な行アドレス 0 の使用方法です
 ```
 
+### エスケープシーケンス
+
+* `\a`
+  ```sh
+  > echo -e 'a\ac' | sed -e 's/\a/b/'
+  abc
+  ```
+* `\f`
+  ```sh
+  > echo -e 'a\fc' | sed -e 's/\f/b/'
+  abc
+  ```
+* `\n`
+  ```sh
+  > echo -e 'a\nc' | sed -e 's/\n/b/'
+  a
+  c
+  ```
+* `\r`
+  ```sh
+  > echo -e 'a\rc' | sed -e 's/\r/b/'
+  abc
+  ```
+* `\t`
+  ```sh
+  > echo -e 'a\tc' | sed -e 's/\t/b/'
+  abc
+  ```
+* `\v`
+  ```sh
+  > echo -e 'a\vc' | sed -e 's/\v/b/'
+  abc
+  ```
+
+FreeBSD sed の場合は `\a`, `\f`, `\v` は下記のエラーが発生する。
+同じエラーで `\s`, `\w` などの文字クラスも使えない。
+
+```
+RE error: trailing backslash (\)
+```
+
 ### 正規表現
 
 基本正規表現(BRE)のメタ文字は `.`, `*`, `\`, `^`, `$`, `[`。
 拡張正規表現(`-E, -r` オプション/ERE)のメタ文字は基本正規表現のメタ文字に追加して `+`, `?`, `{`, `(`, `)`, `|`。
+
+```sh
+> echo 'abc' | sed -e 's/\(bc\)/& &/'
+abc bc
+```
+
+```sh
+> echo 'aaa' | sed -e 's/a\{1,2\}/b/'
+ba
+```
+
+```sh
+> echo 'abc' | sed -E -e 's/(bc)/& &/'
+abc bc
+```
+
+```sh
+> echo 'aaa' | sed -E -e 's/a{1,2}/b/'
+ba
+```
 
 ### ラベル(:)
 
@@ -600,6 +661,17 @@ d
 c
 ```
 
+FreeBSD sed の場合は command の後に改行が必要になる。
+
+```sh
+> echo -e 'a\nb\nc' | sed -e '2a\
+d'
+a
+b
+d
+c
+```
+
 ### 挿入(i)
 
 命令に `[ADDRESS]iNEW` の形式で指定する。
@@ -609,6 +681,17 @@ c
 
 ```sh
 > echo -e 'a\nb\nc' | sed -e '2id'
+a
+d
+b
+c
+```
+
+FreeBSD sed の場合は command の後に改行が必要になる。
+
+```sh
+> echo -e 'a\nb\nc' | sed -e '2i\
+d'
 a
 d
 b
@@ -693,6 +776,16 @@ d
 a
 d
 d
+```
+
+FreeBSD sed の場合は command の後に改行が必要になる。
+
+```sh
+> echo -e 'a\nb\nc' | sed -e '2c\
+d'
+a
+d
+c
 ```
 
 ### 削除(d)
