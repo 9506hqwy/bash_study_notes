@@ -15,6 +15,7 @@ command_group
 input
 arithmetic
 regular_expression
+profile
 ```
 
 - [GNU Bash manual](https://www.gnu.org/software/bash/manual/)
