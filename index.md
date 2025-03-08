@@ -9,7 +9,7 @@ numbered: 4
 
 control
 variables
-command
+command/index
 command_combine
 command_group
 input
