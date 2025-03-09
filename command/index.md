@@ -3,6 +3,7 @@
 ```{toctree}
 builtin
 awk
+curl
 sed
 tail
 xargs
