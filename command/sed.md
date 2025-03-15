@@ -2,7 +2,7 @@
 
 以下のフォーマットでコマンドを記載して各行を処理をする。
 
-```
+```text
 [ADDRESS][!]COMMAND[ARG]...
 ```
 
@@ -112,32 +112,43 @@ sed: -e expression #1, char 4: 無効な行アドレス 0 の使用方法です
 ## エスケープシーケンス
 
 * `\a`
+
   ```sh
   > echo -e 'a\ac' | sed -e 's/\a/b/'
   abc
   ```
+
 * `\f`
+
   ```sh
   > echo -e 'a\fc' | sed -e 's/\f/b/'
   abc
   ```
+
 * `\n`
+
   ```sh
   > echo -e 'a\nc' | sed -e 's/\n/b/'
   a
   c
   ```
+
 * `\r`
+
   ```sh
   > echo -e 'a\rc' | sed -e 's/\r/b/'
   abc
   ```
+
 * `\t`
+
   ```sh
   > echo -e 'a\tc' | sed -e 's/\t/b/'
   abc
   ```
+
 * `\v`
+
   ```sh
   > echo -e 'a\vc' | sed -e 's/\v/b/'
   abc
@@ -146,7 +157,7 @@ sed: -e expression #1, char 4: 無効な行アドレス 0 の使用方法です
 FreeBSD sed の場合は `\a`, `\f`, `\v` は下記のエラーが発生する。
 同じエラーで `\s`, `\w` などの文字クラスも使えない。
 
-```
+```text
 RE error: trailing backslash (\)
 ```
 
@@ -398,7 +409,6 @@ c
 a
 ```
 
-
 ## リスト(l)
 
 命令に `[ADDRESS]l [WIDTH]` の形式で指定する。
@@ -470,7 +480,6 @@ c
 }'
 a
 ```
-
 
 ## 置換(s)
 

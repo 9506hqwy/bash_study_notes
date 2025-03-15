@@ -1,4 +1,4 @@
-# Welcome to Bash Study Notes's documentation!
+# Welcome to Bash Study Notes's documentation
 
 ```{toctree}
 ---
