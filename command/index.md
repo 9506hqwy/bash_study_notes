@@ -7,4 +7,5 @@ curl
 sed
 tail
 xargs
+yq
 ```
