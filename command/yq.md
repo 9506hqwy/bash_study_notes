@@ -39,6 +39,10 @@ EOF
 1
 ```
 
+```{warning}
+TODO: Traverse (Read)
+```
+
 ### 配列
 
 `[ ]` で配列の要素を取り出す。
@@ -88,6 +92,18 @@ EOF
 - - 1
   - 2
   - 3
+```
+
+```sh
+> yq '.a.[1:2]' <(cat <<EOF
+a:
+- 1
+- 2
+- 3
+EOF
+)
+
+- 2
 ```
 
 すべて取り出す。
@@ -153,6 +169,49 @@ a: ~
 EOF
 )
 
+1
+```
+
+### 再帰
+
+`..` で再帰的に value をクエリする。
+
+```sh
+> yq '..' <(cat <<EOF
+a:
+  b:
+    c: 1
+EOF
+)
+
+a:
+  b:
+    c: 1
+b:
+  c: 1
+c: 1
+1
+```
+
+`...` で再帰的に key,  value をクエリする。
+
+```sh
+> yq '...' <(cat <<EOF
+a:
+  b:
+    c: 1
+EOF
+)
+
+a:
+  b:
+    c: 1
+a
+b:
+  c: 1
+b
+c: 1
+c
 1
 ```
 
@@ -277,6 +336,10 @@ EOF
 
 - b
 - d
+```
+
+```{warning}
+TODO: String Operators
 ```
 
 ### 時間演算
@@ -814,6 +877,12 @@ a: 1
 b: 2
 ```
 
+### `ireduce`
+
+```{warning}
+TODO:
+```
+
 ### `key`
 
 キー名を取得する。
@@ -1054,6 +1123,220 @@ b:
 TODO
 ```
 
+### `pick`
+
+引数に一致する項目のみ取得する。
+
+```sh
+> yq 'pick(["a"])' <(cat <<EOF
+a: 1
+b: 2
+EOF
+)
+
+a: 1
+```
+
+配列から指定した要素以外を削除する。
+
+```sh
+> yq 'pick([0, 2])' <(cat <<EOF
+- 1
+- 2
+- 3
+EOF
+)
+
+- 1
+- 3
+```
+
+### `pivot`
+
+行列の行と列を入れ替える
+
+```sh
+> yq 'pivot' <(cat <<EOF
+-
+  - 1
+-
+  - 2
+-
+  - 3
+EOF
+)
+
+- - 1
+  - 2
+  - 3
+```
+
+### `reverse`
+
+配列を逆順にする。
+
+```sh
+> yq 'reverse' <(cat <<EOF
+- 1
+- 2
+- 3
+EOF
+)
+
+- 3
+- 2
+- 1
+```
+
+### `select`
+
+引数に指定した式に一致する項目を取得する。
+
+```sh
+> yq '.[] | select(.a == 2)' <(cat <<EOF
+- a: 1
+- a: 2
+- a: 3
+EOF
+)
+
+a: 2
+```
+
+比較にワイルドカードが使用できる。
+
+```sh
+> yq '.[] | select(. == "*e*")' <(cat <<EOF
+- abc
+- def
+- ghi
+EOF
+)
+
+def
+```
+
+比較に正規表現が使用できる。
+
+```sh
+> yq '.[] | select(test("^.e.$"))' <(cat <<EOF
+- abc
+- def
+- ghi
+EOF
+)
+
+def
+```
+
+### `shuffle`
+
+配列をシャッフルする。
+
+```sh
+> yq 'shuffle' <(cat <<EOF
+- 1
+- 2
+- 3
+EOF
+)
+
+- 1
+- 3
+- 2
+```
+
+### `sort`
+
+配列を value でソートする。
+
+```sh
+> yq 'sort' <(cat <<EOF
+- 2
+- 1
+- 3
+EOF
+)
+
+- 1
+- 2
+- 3
+```
+
+### `sort_by`
+
+引数に指定した式で配列をソートする。
+
+```sh
+> yq 'sort_by(.)' <(cat <<EOF
+- 2
+- 1
+- 3
+EOF
+)
+
+- 1
+- 2
+- 3
+```
+
+複数をキーにできる。
+
+```sh
+> yq 'sort_by(.a, .b)' <(cat <<EOF
+- a: 2
+  b: 2
+- a: 2
+  b: 1
+- a: 1
+  b: 2
+EOF
+)
+
+- a: 1
+  b: 2
+- a: 2
+  b: 1
+- a: 2
+  b: 2
+```
+
+### `sort_keys`
+
+引数に指定した式の項目を key でソートする。
+
+```sh
+> yq 'sort_keys(.)' <(cat <<EOF
+b: 2
+a: 1
+c: 3
+EOF
+)
+
+a: 1
+b: 2
+c: 3
+```
+
+### `split_doc`
+
+項目ごとにドキュメントに分割する。
+
+```sh
+> yq '.[] | split_doc' <(cat <<EOF
+- 1
+- 2
+- 3
+EOF
+)
+
+1
+---
+2
+---
+3
+```
+
 ### `strenv`
 
 環境変数の文字列を取得する。
@@ -1062,6 +1345,49 @@ TODO
 > yq --null-input 'strenv(HOME)'
 
 /root
+```
+
+### `tag`
+
+項目のタグを取得する。
+
+```sh
+> yq '.[] | tag' <(cat <<EOF
+- 1
+- a
+- true
+- [1, a]
+- {1: a}
+EOF
+)
+
+!!int
+!!str
+!!bool
+!!seq
+!!map
+```
+
+タグを指定する。
+
+```sh
+> yq '.a tag="!!mytag"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: !!mytag 1
+```
+
+タグを指定して型を変換できる。
+
+```sh
+> yq '.a tag="!!str"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: "1"
 ```
 
 ### `to_entries`
@@ -1079,6 +1405,21 @@ EOF
   value: 1
 - key: b
   value: 2
+```
+
+### `to_number`
+
+値を数値に変換する。
+
+```sh
+> yq '.[]  | to_number' <(cat <<EOF
+- "1"
+- "1.1"
+EOF
+)
+
+1
+1.1
 ```
 
 ### `to_unix`
@@ -1163,6 +1504,12 @@ d: 2
 ```
 
 ## フォーマット変換
+
+```{warning}
+TODO
+```
+
+## スタイル
 
 ```{warning}
 TODO
