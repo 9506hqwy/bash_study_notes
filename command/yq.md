@@ -39,8 +39,16 @@ EOF
 1
 ```
 
-```{warning}
-TODO: Traverse (Read)
+配列の場合にオブジェクトを期待して `key?` としてもエラーにならない。
+
+```sh
+> yq '.a?' <(cat <<EOF
+- 1
+- 2
+- 3
+EOF
+)
+
 ```
 
 ### 配列
@@ -622,6 +630,22 @@ EOF
 2
 ```
 
+### `delpaths`
+
+第一引数の配列に一致する項目を削除する。
+
+```sh
+> yq 'delpaths([["a", "b", "c"]])' <(cat <<EOF
+a:
+  b:
+    c: 3
+EOF
+)
+
+a:
+  b: {}
+```
+
 ### `env`
 
 環境変数の値を取得する。
@@ -1119,8 +1143,19 @@ b:
 
 ### `path`
 
-```{warning}
-TODO
+式が一致したキーの配列を取得する。
+
+```sh
+> yq '.a.b.c | path' <(cat <<EOF
+a:
+  b:
+    c: 3
+EOF
+)
+
+- a
+- b
+- c
 ```
 
 ### `pick`
@@ -1227,6 +1262,23 @@ EOF
 )
 
 def
+```
+
+### `setpath`
+
+第一引数の配列に一致する項目に第2引数に指定した値で更新する。
+
+```sh
+> yq 'setpath(["a", "b", "c"]; 4)' <(cat <<EOF
+a:
+  b:
+    c: 3
+EOF
+)
+
+a:
+  b:
+    c: 4
 ```
 
 ### `shuffle`
@@ -1445,6 +1497,66 @@ EOF
 2025-03-16T10:02:03+09:00
 ```
 
+### `unique`
+
+重複した値を除外する。
+
+```sh
+> yq 'unique' <(cat <<EOF
+- 3
+- 1
+- 3
+- 2
+EOF
+)
+
+- 3
+- 1
+- 2
+```
+
+### `unique_by`
+
+引数に指定した式を評価結果で除外する。
+
+```sh
+> yq 'unique_by(tag)' <(cat <<EOF
+- 3
+- a
+- 2
+- []
+- b
+EOF
+)
+
+- 3
+- a
+- []
+```
+
+### `with`
+
+第一引数に指定した式をスコープにして第2引数の式を評価する。。
+
+```sh
+> yq 'with(.a.b; .c[1] *= 2)' <(cat <<EOF
+a:
+  b:
+    c:
+      - 1
+      - 2
+      - 3
+EOF
+)
+
+a:
+  b:
+    c:
+      - 1
+      - 4
+      - 3
+```
+
 ### `with_entries`
 
 引数に指定した値をキーにする。
@@ -1505,12 +1617,353 @@ d: 2
 
 ## フォーマット変換
 
+### CSV
+
+配列を CSV に変換する。
+
+```sh
+> yq -o=csv <(cat <<EOF
+- a: 1
+  b: 2
+- a: 3
+  b: 4
+- a: 5
+  b: 6
+EOF
+)
+
+a,b
+1,2
+3,4
+5,6
+```
+
+CSV と配列に変換する。
+
+```sh
+> yq -p=csv -o=yaml <(cat <<EOF
+a,b
+1,2
+3,4
+5,6
+EOF
+)
+
+- a: 1
+  b: 2
+- a: 3
+  b: 4
+- a: 5
+  b: 6
+```
+
+### TSV
+
+配列を TSV に変換する。
+
+```sh
+> yq -o=tsv <(cat <<EOF
+- a: 1
+  b: 2
+- a: 3
+  b: 4
+- a: 5
+  b: 6
+EOF
+)
+
+a       b
+1       2
+3       4
+5       6
+```
+
+### JSON
+
+JSON に変換する。
+
+```sh
+> yq -o=json <(cat <<EOF
+a: 1
+b: c
+d:
+  - 1
+  - 2
+e:
+  f: 1
+EOF
+)
+
+{
+  "a": 1,
+  "b": "c",
+  "d": [
+    1,
+    2
+  ],
+  "e": {
+    "f": 1
+  }
+}
+```
+
+JSON から YAML に変換する。
+
+```sh
+> yq -p=json -o=yaml <(cat <<EOF
+{
+  "a": 1,
+  "b": "c",
+  "d": [
+    1,
+    2
+  ],
+  "e": {
+    "f": 1
+  }
+}
+EOF
+)
+
+a: 1
+b: c
+d:
+  - 1
+  - 2
+e:
+  f: 1
+```
+
+### Properties
+
+ドット区切りの文字列のキーと値に変換する。
+
+```sh
+> yq -o=props <(cat <<EOF
+a: 1
+b: c
+d:
+  - 1
+  - 2
+e:
+  f: 1
+EOF
+)
+
+a = 1
+b = c
+d.0 = 1
+d.1 = 2
+e.f = 1
+```
+
+ドット区切りの文字列のキーと値から YAML に変換する。
+
+```sh
+> yq -p=props -o=yaml <(cat <<EOF
+a = 1
+b = c
+d.0 = 1
+d.1 = 2
+e.f = 1
+EOF
+)
+
+a: "1"
+b: c
+d:
+  - "1"
+  - "2"
+e:
+  f: "1"
+```
+
+### XML
+
 ```{warning}
 TODO
 ```
 
+### TOML
+
+TOML から YAML に変換する。
+
+```sh
+> yq -p=toml <(cat <<EOF
+[a]
+b = 1
+
+[c.d]
+e = 2
+f = 3
+EOF
+)
+
+a:
+  b: 1
+c:
+  d:
+    e: 2
+    f: 3
+```
+
+### シェル変数
+
+シェル変数に変換する。
+
+```sh
+> yq -o=shell <(cat <<EOF
+a: 1
+b: c
+d:
+  - 1
+  - 2
+e:
+  f: 1
+EOF
+)
+
+a=1
+b=c
+d_0=1
+d_1=2
+e_f=1
+```
+
 ## スタイル
 
-```{warning}
-TODO
+スタイルを取得/設定するには `style` 関数を使用する。
+スタイルを元に戻すには空文字を設定する。
+
+### single
+
+シングルクォートで囲む。
+
+```sh
+> yq '.a style="single"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: '1'
+```
+
+### double
+
+ダブルクォートで囲む。
+
+```sh
+> yq '.a style="double"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: "1"
+```
+
+### tagged
+
+タグ情報を追加する。
+
+```sh
+> yq '.a style="tagged"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: !!int 1
+```
+
+### literal
+
+リテラルブロックに変換する([8.1.2. Literal Style](https://yaml.org/spec/1.2.2/#literal-style))。
+
+```sh
+> yq '.a style="literal"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: |-
+  1
+```
+
+### folded
+
+フォールドブロックに変換する([Block Folding](https://yaml.org/spec/1.2.2/#block-folding))。
+
+```sh
+> yq '.a style="folded"' <(cat <<EOF
+a: 1
+EOF
+)
+
+a: >-
+  1
+```
+
+### flow
+
+フローに変換する([7.3. Flow Scalar Styles](https://yaml.org/spec/1.2.2/#flow-scalar-styles))。
+
+```sh
+> yq '. style="flow"' <(cat <<EOF
+a: 1
+EOF
+)
+
+{a: 1}
+```
+
+## 変数
+
+`as` で変数 `$xxx` を定義する。
+変数にはスカラー、配列、マップが代入できる。
+
+```sh
+> yq '.a as $x | .b + $x' <(cat <<EOF
+a: 1
+b: 2
+EOF
+)
+
+3
+```
+
+## フロントマター
+
+ファイルの先頭のドキュメントを処理する。
+
+```sh
+> yq -f process '.a = 3' <(cat <<EOF
+---
+a: 1
+b: 2
+---
+xyz
+EOF
+)
+
+---
+a: 3
+b: 2
+---
+xyz
+```
+
+フロントマターを処理して取り出す。
+
+```sh
+> yq -f extract '.a = 3' <(cat <<EOF
+---
+a: 1
+b: 2
+---
+xyz
+EOF
+)
+
+---
+a: 3
+b: 2
 ```
