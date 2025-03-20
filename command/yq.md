@@ -323,6 +323,8 @@ true
 
 ### 文字列演算
 
+#### 連結
+
 文字列を連結する。
 
 ```sh
@@ -333,6 +335,21 @@ EOF
 
 a: bc
 ```
+
+配列を連携する。
+
+```sh
+> yq 'join(",")' <(cat <<EOF
+- a
+- b
+- c
+EOF
+)
+
+a,b,c
+```
+
+#### 分割
 
 文字列を分割する。
 
@@ -346,8 +363,126 @@ EOF
 - d
 ```
 
-```{warning}
-TODO: String Operators
+指定した文字で分割する。
+
+```sh
+> yq '.a | split(",")' <(cat <<EOF
+a: a,b,c
+EOF
+)
+
+- a
+- b
+- c
+```
+
+#### 大文字 / 小文字
+
+大文字に変換する。
+
+```sh
+> yq --null-input '"a" | upcase'
+
+A
+```
+
+小文字に変換する。
+
+```sh
+> yq --null-input '"A" | downcase'
+
+a
+```
+
+#### 空白除去
+
+空白を削除する。
+
+```sh
+> yq '.[] | trim' <(cat <<EOF
+- " a"
+- "b "
+- " c "
+EOF
+)
+
+a
+b
+c
+```
+
+#### 正規表現
+
+正規表現は Go の表記に従う。
+
+```sh
+> yq '.a | test("(?i)hello")' <(cat <<EOF
+a: Hello, world
+EOF
+)
+
+true
+```
+
+一致した情報を返却する。
+
+```sh
+> yq '.a | match("world")' <(cat <<EOF
+a: hello, world
+EOF
+)
+
+string: world
+offset: 7
+length: 5
+captures: []
+```
+
+キャプチャを取得する。
+
+```sh
+> yq '.a | capture("(?<a>world)")' <(cat <<EOF
+a: hello, world
+EOF
+)
+
+a: world
+```
+
+正規表現を使用して文字列を置換する。
+
+```sh
+> yq '.a | sub("o", "O")' <(cat <<EOF
+a: hello, world
+EOF
+)
+
+hellO, wOrld
+```
+
+マッチした文字列を利用する。
+
+```sh
+> yq '.a | sub("(o)", "${1},")' <(cat <<EOF
+a: hello, world
+EOF
+)
+
+hello,, wo,rld
+```
+
+#### 文字列補間
+
+文字列を式の評価結果で補間する。
+
+```sh
+> yq '.b = "\(.a) world"' <(cat <<EOF
+a: hello
+EOF
+)
+
+a: hello
+b: hello world
 ```
 
 ### 時間演算
@@ -380,21 +515,70 @@ a:
 ```
 
 配列を連携する。
+`*` に `+` フラグを付けると同じ操作となる。
 
 ```sh
 > yq '.a = .a + .b' <(cat <<EOF
 a:
-- 1
+- x:
+  - 1
 b:
-- 2
+- x:
+  - 2
 EOF
 )
 
 a:
-  - 1
-  - 2
+  - x:
+      - 1
+  - x:
+      - 2
 b:
+  - x:
+      - 2
+
+> yq '.a = .a *+ .b' <(cat <<EOF
+a:
+- x:
+  - 1
+b:
+- x:
   - 2
+EOF
+)
+
+a:
+  - x:
+      - 1
+  - x:
+      - 2
+b:
+  - x:
+      - 2
+```
+
+子要素もマージする。
+
+```sh
+> yq '.a = .a *+d .b' <(cat <<EOF
+a:
+- x:
+  - 1
+b:
+- x:
+  - 2
+EOF
+)
+
+a:
+  - x:
+      - 2
+      - 2
+  - x:
+      - 2
+b:
+  - x:
+      - 2
 ```
 
 配列から一致する要素を削除する。
@@ -433,10 +617,59 @@ a:
   d: 2
 b:
   d: 2
+
+> yq '.a = .a * .b' <(cat <<EOF
+a:
+  c: 1
+b:
+  d: 2
+EOF
+)
+
+a:
+  c: 1
+  d: 2
+b:
+  d: 2
 ```
 
-```{warning}
-TODO: Multiply
+存在する項目のみマージする。
+
+```sh
+> yq '.a = .a *? .b' <(cat <<EOF
+a:
+  c: 1
+b:
+  c: 2
+  d: 3
+EOF
+)
+
+a:
+  c: 2
+b:
+  c: 2
+  d: 3
+```
+
+存在しない項目のみマージする。
+
+```sh
+> yq '.a = .a *n .b' <(cat <<EOF
+a:
+  c: 1
+b:
+  c: 2
+  d: 3
+EOF
+)
+
+a:
+  c: 1
+  d: 3
+b:
+  c: 2
+  d: 3
 ```
 
 ## 関数
@@ -1474,6 +1707,29 @@ EOF
 1.1
 ```
 
+### `to_string`
+
+値を文字列に変換する。
+
+```sh
+> yq '.[] |= to_string' <(cat <<EOF
+- 1
+- a
+- true
+- null
+- [1, 2]
+- b: c
+EOF
+)
+
+- "1"
+- a
+- "true"
+- "null"
+- "[1, 2]"
+- "b: c"
+```
+
 ### `to_unix`
 
 タイムスタンプを変換する。
@@ -1600,7 +1856,7 @@ EOF
 
 - 1
 - 2
-``
+```
 
 マップを出力する。
 
