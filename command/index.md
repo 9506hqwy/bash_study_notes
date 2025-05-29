@@ -3,6 +3,7 @@
 ```{toctree}
 builtin
 awk
+crudini
 curl
 date
 paste
