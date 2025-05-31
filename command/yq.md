@@ -1030,7 +1030,7 @@ TODO
 key-value のマップから変換する。
 
 ```sh
-> yq '.  | from_entries' <(cat <<EOF
+> yq '. | from_entries' <(cat <<EOF
 - key: a
   value: 1
 - key: b
@@ -1047,7 +1047,7 @@ b: 2
 タイムスタンプを変換する。
 
 ```sh
-> yq --null-input '1675301929  | from_unix'
+> yq --null-input '1675301929 | from_unix'
 
 2023-02-02T10:38:49+09:00
 ```
@@ -1312,7 +1312,7 @@ a: 2
 b: 4
 ```
 
-### `mix`
+### `min`
 
 最小値を返却する。
 
@@ -1680,7 +1680,7 @@ a: "1"
 key-value のマップに変換する。
 
 ```sh
-> yq '.  | to_entries' <(cat <<EOF
+> yq '. | to_entries' <(cat <<EOF
 a: 1
 b: 2
 EOF
@@ -1697,7 +1697,7 @@ EOF
 値を数値に変換する。
 
 ```sh
-> yq '.[]  | to_number' <(cat <<EOF
+> yq '.[] | to_number' <(cat <<EOF
 - "1"
 - "1.1"
 EOF
@@ -1735,7 +1735,7 @@ EOF
 タイムスタンプを変換する。
 
 ```sh
-> yq --null-input 'now  | to_unix'
+> yq --null-input 'now | to_unix'
 
 1742103244
 ```
@@ -1818,7 +1818,7 @@ a:
 引数に指定した値をキーにする。
 
 ```sh
-> yq '.  | with_entries(.key |= "KEY_" + .)' <(cat <<EOF
+> yq '. | with_entries(.key |= "KEY_" + .)' <(cat <<EOF
 a: 1
 b: 2
 EOF

@@ -6,6 +6,7 @@ awk
 crudini
 curl
 date
+jq
 paste
 sed
 tail
