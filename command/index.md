@@ -9,6 +9,7 @@ date
 jq
 paste
 sed
+ssh
 tail
 trurl
 xargs
