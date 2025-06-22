@@ -46,6 +46,97 @@ $*
 $#
 : $1..N の個数
 
+## 配列
+
+配列を定義する。
+
+```sh
+> ARRAY=(1 2 3 4 5)
+>
+> for V in ${ARRAY[@]}
+> do
+>   echo $V
+> done
+1
+2
+3
+4
+5
+```
+
+要素を追加する。
+
+```sh
+> ARRAY=(1 2 3 4 5)
+> ARRAY+=(6)
+> echo ${ARRAY[5]}
+6
+```
+
+値を更新する。
+
+```sh
+> ARRAY=(1 2 3 4 5)
+> ARRAY[4]=6
+>
+> for V in ${ARRAY[@]}
+> do
+>   echo $V
+> done
+1
+2
+3
+4
+6
+```
+
+配列を連結する。
+
+```sh
+> ARRAY=(1 2 3 4 5)
+> declare -p ARRAY
+declare -a ARRAY=([0]="1" [1]="2" [2]="3" [3]="4" [4]="5")
+
+> declare -p IFS
+declare -- IFS=$' \t\n'
+
+# 空白で連結する。
+> V="${ARRAY[*]}"
+> declare -p V
+declare -- V="1 2 3 4 5"
+
+> echo -e $V
+1 2 3 4 5
+
+# '-' で連結する。
+> (IFS='-'; V="${ARRAY[*]}"; declare -p V; IFS=$OLSIFS; echo -e $V)
+declare -- V="1-2-3-4-5"
+1-2-3-4-5
+```
+
+文字列を分割する。
+
+```sh
+# 空白で分割する。
+> VALUE="1 2 3 4 5"
+> ARRAY=($VALUE)
+> declare -p ARRAY
+declare -a ARRAY=([0]="1" [1]="2" [2]="3" [3]="4" [4]="5")
+
+# '-' で分割する。
+> VALUE="1-2-3-4-5"
+> (IFS='-'; ARRAY=($VALUE); declare -p ARRAY)
+declare -a ARRAY=([0]="1" [1]="2" [2]="3" [3]="4" [4]="5")
+```
+
+配列の要素数を取得する。
+
+```sh
+> ARRAY=(1 2 3 4 5)
+> echo ${#ARRAY[@]}
+5
+```
+
 ## 特殊変数
 
 $_
