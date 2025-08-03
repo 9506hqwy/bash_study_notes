@@ -109,7 +109,7 @@ declare -- V="1 2 3 4 5"
 1 2 3 4 5
 
 # '-' で連結する。
-> (IFS='-'; V="${ARRAY[*]}"; declare -p V; IFS=$OLSIFS; echo -e $V)
+> (IFS='-'; V="${ARRAY[*]}"; declare -p V; IFS=$OLDIFS; echo -e $V)
 declare -- V="1-2-3-4-5"
 1-2-3-4-5
 ```

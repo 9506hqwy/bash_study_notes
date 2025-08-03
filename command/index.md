@@ -7,6 +7,7 @@ crudini
 curl
 date
 find
+gpg
 jq
 paste
 sed
