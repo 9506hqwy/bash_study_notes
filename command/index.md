@@ -13,6 +13,7 @@ paste
 sed
 ssh
 tail
+tcpdump
 trurl
 xargs
 yes
