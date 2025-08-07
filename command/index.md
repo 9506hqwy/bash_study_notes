@@ -15,6 +15,7 @@ ssh
 tail
 tcpdump
 trurl
+tshark
 xargs
 yes
 yq
