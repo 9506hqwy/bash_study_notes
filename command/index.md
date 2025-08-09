@@ -3,6 +3,7 @@
 ```{toctree}
 builtin
 awk
+certtool
 crudini
 curl
 date
