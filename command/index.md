@@ -15,6 +15,7 @@ sed
 ssh
 tail
 tcpdump
+tmux
 trurl
 tshark
 xargs
