@@ -10,6 +10,7 @@ date
 find
 gpg
 jq
+openssl
 paste
 sed
 ssh

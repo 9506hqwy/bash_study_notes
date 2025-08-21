@@ -692,7 +692,7 @@ RemoteForward はぞれぞれマシンの `gpgconf --list-dirs` の値を指定�
 設定方法は [AgentForwarding](https://wiki.gnupg.org/AgentForwarding) を参照する。
 
 ```{note}
---list-secret-keys 実行時に下記のメッセージが出力されるが秘密鍵は使用できるし鍵の使用はできる。
+--list-secret-keys 実行時に下記のメッセージが出力されるが秘密鍵は使用できるし署名に利用はできる。
 
 gpg: problem with fast path key listing: 禁止 - ignored
 
