@@ -670,6 +670,89 @@ server.pem: OK
 client.pem: OK
 ```
 
+### 接続確認
+
+TLS の接続を確認する。
+
+nginx にサーバ証明書を設定する。
+
+```sh
+> cat > /etc/nginx/conf.d/server.conf <<EOF
+server {
+    listen              443 ssl;
+    ssl_certificate     /etc/nginx/ssl/server.pem;
+    ssl_certificate_key /etc/nginx/ssl/server.key;
+}
+EOF
+```
+
+接続確認する。
+
+```sh
+> openssl s_client -connect 127.0.0.1:443 < /dev/null
+Connecting to 127.0.0.1
+CONNECTED(00000003)
+Can't use SSL_get_servername
+depth=0 CN=centos9, O=Home
+verify error:num=20:unable to get local issuer certificate
+verify return:1
+depth=0 CN=centos9, O=Home
+verify error:num=21:unable to verify the first certificate
+verify return:1
+depth=0 CN=centos9, O=Home
+verify return:1
+---
+Certificate chain
+ 0 s:CN=centos9, O=Home
+   i:CN=Home
+   a:PKEY: ED25519, 256 (bit); sigalg: ED25519
+   v:NotBefore: Aug 21 11:34:53 2025 GMT; NotAfter: Sep 20 11:34:53 2025 GMT
+---
+Server certificate
+-----BEGIN CERTIFICATE-----
+(base64-ed string)
+-----END CERTIFICATE-----
+subject=CN=centos9, O=Home
+issuer=CN=Home
+---
+No client certificate CA names sent
+Peer signature type: ed25519
+Peer Temp Key: X25519, 253 bits
+---
+SSL handshake has read 775 bytes and written 385 bytes
+Verification error: unable to verify the first certificate
+---
+New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+Protocol: TLSv1.3
+Server public key is 256 bit
+This TLS version forbids renegotiation.
+Compression: NONE
+Expansion: NONE
+No ALPN negotiated
+Early data was not sent
+Verify return code: 21 (unable to verify the first certificate)
+---
+---
+Post-Handshake New Session Ticket arrived:
+SSL-Session:
+    Protocol  : TLSv1.3
+    Cipher    : TLS_AES_256_GCM_SHA384
+
+    ...
+---
+read R BLOCK
+---
+Post-Handshake New Session Ticket arrived:
+SSL-Session:
+    Protocol  : TLSv1.3
+    Cipher    : TLS_AES_256_GCM_SHA384
+
+    ...
+---
+read R BLOCK
+DONE
+```
+
 ## その他
 
 ### ランダム値
