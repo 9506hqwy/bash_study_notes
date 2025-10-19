@@ -8,6 +8,7 @@ crudini
 curl
 date
 find
+firewalld
 gpg
 jq
 openssl
