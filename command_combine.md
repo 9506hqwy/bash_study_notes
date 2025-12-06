@@ -8,7 +8,7 @@
 <(CMD)
 ```
 
-例
+例を記載する。
 
 ```sh
 cat <(echo test)

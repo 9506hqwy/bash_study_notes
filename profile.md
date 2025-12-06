@@ -2,7 +2,7 @@
 
 Bash を起動したときに読み込まれるプロファイルは以下となる。
 
-Bash が呼び出すプロファイルと、シェルスクリプトが呼び出すプロファイルがある。
+Bash が呼び出すプロファイルと、シェルスクリプトが呼び出すプロファイルの2つがある。
 
 ## ログインシェルの場合
 
@@ -34,19 +34,19 @@ else if ((maybe_execute_file ("~/.bash_profile", 1) == 0) &&
     maybe_execute_file ("~/.profile", 1);
 ```
 
-例:
+例を記載する。
 
 ```sh
 bash --login
 ```
 
-例:
+例を記載する。
 
 ```sh
 ssh <host>
 ```
 
-例:
+例を記載する。
 
 ```sh
 su -
@@ -63,7 +63,7 @@ su -
 $ENV で指定されたファイル (bash が呼び出す)
 ```
 
-例:
+例を記載する。
 
 ```sh
 sh --login
@@ -84,13 +84,13 @@ $BASH_ENV で指定されたファイル (bash が呼び出す)
 execute_env_file (get_string_value ("BASH_ENV"));
 ```
 
-例:
+例を記載する。
 
 ```sh
 bash -c <command>
 ```
 
-例:
+例を記載する。
 
 ```sh
 su bash -c <command>
@@ -109,7 +109,7 @@ su bash -c <command>
 $BASH_ENV で指定されたファイル (bash が呼び出す)
 ```
 
-例:
+例を記載する。
 
 ```sh
 su - bash -c <command>
@@ -128,7 +128,7 @@ maybe_execute_file (bashrc_file, 1);
 return;
 ```
 
-例:
+例を記載する。
 
 ```sh
 ssh <host> <command>
@@ -150,7 +150,7 @@ ssh <host> <command>
 maybe_execute_file (bashrc_file, 1);
 ```
 
-例:
+例を記載する。
 
 ```sh
 bash
@@ -167,7 +167,7 @@ $ENV で指定されたファイル (bash が呼び出す)
 execute_env_file (get_string_value ("ENV"));
 ```
 
-例:
+例を記載する。
 
 ```sh
 sh
