@@ -14,6 +14,7 @@ jq
 openssl
 paste
 sed
+selinux
 ssh
 tail
 tcpdump
