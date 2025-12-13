@@ -63,6 +63,6 @@ curl -fsSL -o - "https://astral.sh/uv/install.sh" | sh
 uv sync --all-groups
 
 # Install textlint
-npm install -g textlint
-npm install -g textlint-filter-rule-comments
-npm install -g textlint-rule-preset-ja-technical-writing
+sudo npm install -g textlint
+sudo npm install -g textlint-filter-rule-comments
+sudo npm install -g textlint-rule-preset-ja-technical-writing
