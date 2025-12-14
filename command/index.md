@@ -21,6 +21,7 @@ tcpdump
 tmux
 trurl
 tshark
+unshare
 xargs
 yes
 yq
