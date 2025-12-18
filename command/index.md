@@ -10,6 +10,7 @@ date
 find
 firewalld
 gpg
+ip
 jq
 openssl
 paste
