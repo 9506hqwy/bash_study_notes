@@ -892,7 +892,731 @@ Virtual Routing and Fowarding (VRF) を管理する。
 
 IPsec ポリシーを管理する。
 
+## TAP デバイス
+
+仮想 Layer2 デバイスになる。
+
+アドレスを設定してインターフェイスを有効化する。リンクアップはしない。
+
+```sh
+sudo ip addr add 10.0.0.1/24 dev tap0
+sudo ip link set dev tap0 up
+ip link show tap0
+```
+
+```text
+6: tap0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc fq_codel state DOWN mode DEFAULT group default qlen 1000
+    link/ether ae:37:9e:bb:aa:4a brd ff:ff:ff:ff:ff:ff
+```
+
+疎通は通る。
+
+```sh
+ping -c 1 10.0.0.1
+```
+
+```text
+PING 10.0.0.1 (10.0.0.1) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.0.1: icmp_seq=1 ttl=64 時間=0.051ミリ秒
+
+--- 10.0.0.1 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.051/0.051/0.051/0.000 ms
+```
+
+## TUN デバイス
+
+仮想 Layer3 デバイスになる。
+
+アドレスを設定してインターフェイスを有効化する。リンクアップはしない。
+
+```sh
+sudo ip addr add 10.0.0.1/24 dev tun0
+sudo ip link set dev tun0 up
+ip link show tun0
+```
+
+```text
+9: tun0: <NO-CARRIER,POINTOPOINT,MULTICAST,NOARP,UP> mtu 1500 qdisc fq_codel state DOWN mode DEFAULT group default qlen 500
+    link/none
+```
+
+疎通は通る。
+
+```sh
+ping -c 1 10.0.0.1
+```
+
+```text
+PING 10.0.0.1 (10.0.0.1) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.0.1: icmp_seq=1 ttl=64 時間=0.059ミリ秒
+
+--- 10.0.0.1 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.059/0.059/0.059/0.000 ms
+```
+
+## VETH デバイス
+
+仮想 Layer2 デバイスのペアを作成する。
+
+```sh
+sudo ip netns add net0a
+sudo ip netns add net0b
+sudo ip link add veth0a netns net0a type veth peer veth0b netns net0b
+```
+
+名前空間 net0a のデバイスを確認する。
+
+```sh
+sudo ip -d -n net0a link show veth0a
+```
+
+```text
+2: veth0a@if2: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 4a:e5:77:82:29:b4 brd ff:ff:ff:ff:ff:ff link-netns net0b promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net0b のデバイスを確認する。
+
+```sh
+sudo ip -d -n net0b link show veth0b
+```
+
+```text
+2: veth0b@if2: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether b6:af:09:1d:65:59 brd ff:ff:ff:ff:ff:ff link-netns net0a promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てる。
+
+```sh
+sudo ip -n net0a addr add 10.0.0.1/24 dev veth0a
+sudo ip -n net0b addr add 10.0.0.2/24 dev veth0b
+```
+
+veth0a を有効化する。リンクアップはしない。
+
+```sh
+sudo ip -n net0a link set dev veth0a up
+sudo ip -n net0a addr show dev veth0a
+```
+
+```text
+2: veth0a@if2: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default qlen 1000
+    link/ether 4a:e5:77:82:29:b4 brd ff:ff:ff:ff:ff:ff link-netns net0b
+    inet 10.0.0.1/24 scope global veth0a
+       valid_lft forever preferred_lft forever
+```
+
+veth0b を有効化する。リンクアップする。
+
+```sh
+sudo ip -n net0b link set dev veth0b up
+sudo ip -n net0b addr show dev veth0b
+```
+
+```text
+2: veth0b@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether b6:af:09:1d:65:59 brd ff:ff:ff:ff:ff:ff link-netns net0a
+    inet 10.0.0.2/24 scope global veth0b
+       valid_lft forever preferred_lft forever
+    inet6 fe80::b4af:9ff:fe1d:6559/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0a ping -c 1 10.0.0.2
+```
+
+```text
+PING 10.0.0.2 (10.0.0.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.0.2: icmp_seq=1 ttl=64 時間=0.030ミリ秒
+
+--- 10.0.0.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.030/0.030/0.030/0.000 ms
+```
+
+## BRIDGE デバイス
+
+仮想ネットワークスイッチを作成する。
+
+```sh
+sudo ip link add br0 type bridge
+ip -d link show br0
+```
+
+```text
+5: br0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 06:1d:b7:76:83:d3 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.0:0:0:0:0:0 designated_root 8000.0:0:0:0:0:0 root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer    0.00 fdb_n_learned 0 fdb_max_learned 0 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mst_enabled 0 mdb_offload_fail_notification 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+veth を作成して名前空間 net0 とブリッジに接続する。
+
+```sh
+sudo ip netns add net0
+sudo ip link add veth0 type veth peer veth0n netns net0
+sudo ip link set veth0 master br0
+ip -d link show veth0
+```
+
+```text
+6: veth0@if2: <BROADCAST,MULTICAST> mtu 1500 qdisc noop master br0 state DOWN mode DEFAULT group default qlen 1000
+    link/ether 2a:53:c9:0f:51:83 brd ff:ff:ff:ff:ff:ff link-netns net0 promiscuity 1 allmulti 1 minmtu 68 maxmtu 65535
+    veth
+    bridge_slave state disabled priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8001 port_no 0x1 designated_port 32769 designated_cost 0 designated_bridge 8000.2a:53:c9:f:51:83 designated_root 8000.2a:53:c9:f:51:83 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off neigh_vlan_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off mab off addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+veth を作成して名前空間 net1 とブリッジに接続する。
+
+```sh
+sudo ip netns add net1
+sudo ip link add veth1 type veth peer veth1n netns net1
+sudo ip link set veth1 master br0
+ip -d link show veth1
+```
+
+```text
+7: veth1@if2: <BROADCAST,MULTICAST> mtu 1500 qdisc noop master br0 state DOWN mode DEFAULT group default qlen 1000
+    link/ether ba:6d:5f:5c:e8:96 brd ff:ff:ff:ff:ff:ff link-netns net1 promiscuity 1 allmulti 1 minmtu 68 maxmtu 65535
+    veth
+    bridge_slave state disabled priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8002 port_no 0x2 designated_port 32770 designated_cost 0 designated_bridge 8000.2a:53:c9:f:51:83 designated_root 8000.2a:53:c9:f:51:83 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off neigh_vlan_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off mab off addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.0.1/24 dev veth0n
+sudo ip -n net0 link set dev veth0n up
+
+sudo ip -n net1 addr add 10.0.0.2/24 dev veth1n
+sudo ip -n net1 link set dev veth1n up
+
+sudo ip link set dev veth0 up
+sudo ip link set dev veth1 up
+```
+
+ブリッジを有効化する。
+
+```sh
+sudo ip link set dev br0 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.0.2
+```
+
+```text
+PING 10.0.0.2 (10.0.0.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.0.2: icmp_seq=1 ttl=64 時間=0.035ミリ秒
+
+--- 10.0.0.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.035/0.035/0.035/0.000 ms
+```
+
+## VLAN デバイス
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に VLAN 100 のデバイスを作成する。
+
+```sh
+sudo ip -n net0 link add link veth0n name veth0n.100 type vlan id 100
+sudo ip -d -n net0 link show veth0n.100
+```
+
+```text
+3: veth0n.100@veth0n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 22:d7:e9:0e:54:db brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 0 maxmtu 65535
+    vlan protocol 802.1Q id 100 <REORDER_HDR> addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に VLAN 100 のデバイスを作成する。
+
+```sh
+sudo ip -n net1 link add link veth1n name veth1n.100 type vlan id 100
+sudo ip -d -n net1 link show veth1n.100
+```
+
+```text
+3: veth1n.100@veth1n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether aa:98:39:28:d8:d6 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 0 maxmtu 65535
+    vlan protocol 802.1Q id 100 <REORDER_HDR> addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev veth0n.100
+sudo ip -n net0 link set dev veth0n.100 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev veth1n.100
+sudo ip -n net1 link set dev veth1n.100 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.125ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.125/0.125/0.125/0.000 ms
+```
+
+名前空間 net2 を作成して VLAN 101 のデバイスを作成する。
+
+```sh
+sudo ip netns add net2
+sudo ip link add veth2 type veth peer veth2n netns net2
+sudo ip link set veth2 master br0
+
+sudo ip -n net2 link add link veth2n name veth2n.101 type vlan id 101
+
+sudo ip -n net2 addr add 10.0.1.3/24 dev veth2n.101
+
+sudo ip link set dev veth2 up
+sudo ip -n net2 link set dev veth2n up
+sudo ip -n net2 link set dev veth2n.101 up
+
+sudo ip -n net2 addr show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: veth2n@if8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether fa:70:fa:84:d0:a1 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::f870:faff:fe84:d0a1/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+3: veth2n.101@veth2n: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether fa:70:fa:84:d0:a1 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.1.3/24 scope global veth2n.101
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f870:faff:fe84:d0a1/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.3
+```
+
+```text
+PING 10.0.1.3 (10.0.1.3) 56(84) バイトのデータ
+
+(通らない)
+```
+
+`tcpdump` でパケットを確認する。VLAN が設定されている。
+
+```sh
+sudo tcpdump -c 1 -nel -i veth0
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+20:58:14.574920 22:d7:e9:0e:54:db > Broadcast, ethertype 802.1Q (0x8100), length 46: vlan 100, p 0, ethertype ARP (0x0806), Request who-has 10.0.1.3 tell 10.0.1.1, length 28
+1 packet captured
+1 packet received by filter
+0 packets dropped by kernel
+```
+
+## VXLAN デバイス
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に VXLAN 100 のデバイスを作成する。
+
+```sh
+sudo ip -n net0 link add vxlan0 type vxlan id 100 dev veth0n remote 10.0.0.2 local 10.0.0.1 dstport 4789
+sudo ip -d -n net0 link show vxlan0
+```
+
+```text
+4: vxlan0: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 2e:7f:d3:a4:af:16 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    vxlan id 100 remote 10.0.0.2 local 10.0.0.1 dev veth0n srcport 0 0 dstport 4789 ttl auto ageing 300 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に VXLAN 100 のデバイスを作成する。
+
+```sh
+sudo ip -n net1 link add vxlan0 type vxlan id 100 dev veth1n remote 10.0.0.1 local 10.0.0.2 dstport 4789
+sudo ip -d -n net1 link show vxlan0
+```
+
+```sh
+3: vxlan0: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether be:85:da:c0:3f:3c brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    vxlan id 100 remote 10.0.0.1 local 10.0.0.2 dev veth1n srcport 0 0 dstport 4789 ttl auto ageing 300 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev vxlan0
+sudo ip -n net0 link set dev vxlan0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev vxlan0
+sudo ip -n net1 link set dev vxlan0 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.049ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.049/0.049/0.049/0.000 ms
+```
+
+`tcpdump` でパケットを確認する。VXLAN が設定されている。
+
+```sh
+sudo ip netns exec net1 tcpdump -c 1 -nel -i veth1n
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth1n, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+22:54:14.563340 6e:da:ea:46:94:fa > 22:1e:20:e3:69:12, ethertype IPv4 (0x0800), length 92: 10.0.0.1.40638 > 10.0.0.2.vxlan: VXLAN, flags [I] (0x08), vni 100
+2e:7f:d3:a4:af:16 > Broadcast, ethertype ARP (0x0806), length 42: Request who-has 10.0.1.2 tell 10.0.1.1, length 28
+1 packet captured
+4 packets received by filter
+0 packets dropped by kernel
+```
+
+名前空間 `net0` のフォワーディングテーブルを確認する。
+
+```sh
+sudo ip netns exec net0 bridge fdb show dev vxlan0
+```
+
+```text
+00:00:00:00:00:00 dst 10.0.0.2 via veth0n self permanent
+be:85:da:c0:3f:3c dst 10.0.0.2 self
+```
+
+名前空間 `net1` のフォワーディングテーブルを確認する。
+
+```sh
+sudo ip netns exec net1 bridge fdb show dev vxlan0
+```
+
+```text
+00:00:00:00:00:00 dst 10.0.0.1 via veth1n self permanent
+2e:7f:d3:a4:af:16 dst 10.0.0.1 self
+```
+
+## IPVLAN デバイス
+
+親インターフェイスと MAC アドレスを共有したサブインターフェイスを作成する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+### L2 モード
+
+親インターフェイスがブリッジのように動作する。
+
+名前空間 net0 に IPVLAN のデバイスを作成する。
+
+```sh
+sudo ip -n net0 link add link veth0n name ipvlan0 type ipvlan mode l2
+sudo ip -d -n net0 link show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+2: veth0n@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 6e:da:ea:46:94:fa brd ff:ff:ff:ff:ff:ff link-netnsid 0 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+5: ipvlan0@veth0n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 6e:da:ea:46:94:fa brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    ipvlan  mode l2 bridge addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に IPVLAN のデバイスを作成する。
+
+```sh
+sudo ip -n net1 link add link veth1n name ipvlan1 type ipvlan mode l2
+sudo ip -d -n net1 link show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+2: veth1n@if10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 22:1e:20:e3:69:12 brd ff:ff:ff:ff:ff:ff link-netnsid 0 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+4: ipvlan1@veth1n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 22:1e:20:e3:69:12 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    ipvlan  mode l2 bridge addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev ipvlan0
+sudo ip -n net0 link set dev ipvlan0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev ipvlan1
+sudo ip -n net1 link set dev ipvlan1 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.099ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.099/0.099/0.099/0.000 ms
+```
+
+arp テーブルを確認する。
+
+```sh
+sudo ip -n net0 neigh show
+```
+
+```text
+10.0.0.2 dev veth0n lladdr 22:1e:20:e3:69:12 STALE
+10.0.1.2 dev ipvlan0 lladdr 22:1e:20:e3:69:12 STALE
+```
+
+### L3 モード
+
+親インターフェイスがルータのように動作する。
+
+### L3s モード
+
+親インターフェイスがルータのように動作する。
+
+```text
+This is very similar to the L3 mode except that iptables (conn-tracking) works in this mode and hence it is L3-symmetric (L3s).
+```
+
+## MACVLAN デバイス
+
+親インターフェイスと MAC アドレスが別のサブインターフェイスを作成する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+### private モード
+
+同じ親インターフェイスを共有するサブインターフェイスは通信できない。
+
+### vepa モード
+
+親インターフェイスが接続されたスイッチを介して、
+同じ親インターフェイスを共有するサブインターフェイスは通信する。
+
+### bridge モード
+
+親インターフェイスがブリッジのように動作する。
+
+名前空間 net0 に MACVLAN のデバイスを作成する。
+
+```sh
+sudo ip -n net0 link add link veth0n name macvlan0 type macvlan mode bridge
+sudo ip -d -n net0 link show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+2: veth0n@if6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 92:49:9b:72:3d:52 brd ff:ff:ff:ff:ff:ff link-netnsid 0 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+3: macvlan0@veth0n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 32:59:f3:87:09:3d brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    macvlan mode bridge bcqueuelen 1000 usedbcqueuelen 1000 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に MACVLAN のデバイスを作成する。
+
+```sh
+sudo ip -n net1 link add link veth1n name macvlan1 type macvlan mode bridge
+sudo ip -d -n net1 link show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+2: veth1n@if7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 66:ff:e3:db:5a:bd brd ff:ff:ff:ff:ff:ff link-netnsid 0 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+3: macvlan1@veth1n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 32:2b:36:aa:43:e7 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    macvlan mode bridge bcqueuelen 1000 usedbcqueuelen 1000 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev macvlan0
+sudo ip -n net0 link set dev macvlan0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev macvlan1
+sudo ip -n net1 link set dev macvlan1 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.053ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.053/0.053/0.053/0.000 ms
+```
+
+### passthru モード
+
+1つのサブインターフェイスが親インターフェイスと接続される。
+
+### source モード
+
+送信元 MAC アドレスのリストを使用して親インターフェイスで通信をフィルタリングする。MAC アドレスによる VLAN を作成する。
+
+名前空間 net0 に MACVLAN のデバイスを作成する。
+
+```sh
+sudo ip -n net0 link add link veth0n name macvlan0 type macvlan mode source
+sudo ip -d -n net0 link show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+2: veth0n@if6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 92:49:9b:72:3d:52 brd ff:ff:ff:ff:ff:ff link-netnsid 0 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+4: macvlan0@veth0n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 7e:d9:65:33:05:7d brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    macvlan mode source bcqueuelen 1000 usedbcqueuelen 1000 remotes (0) addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に MACVLAN のデバイスを作成する。
+
+```sh
+sudo ip -n net1 link add link veth1n name macvlan1 type macvlan mode source
+sudo ip -d -n net1 link show
+```
+
+```text
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+2: veth1n@if7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 66:ff:e3:db:5a:bd brd ff:ff:ff:ff:ff:ff link-netnsid 0 promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    veth addrgenmode eui64 numtxqueues 2 numrxqueues 2 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+4: macvlan1@veth1n: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 9a:4b:11:18:00:5e brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    macvlan mode source bcqueuelen 1000 usedbcqueuelen 1000 remotes (0) addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev macvlan0
+sudo ip -n net0 link set dev macvlan0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev macvlan1
+sudo ip -n net1 link set dev macvlan1 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+
+(通らない)
+```
+
+名前空間 net0 に maclvan1 の MAC アドレスを登録する。
+
+```sh
+sudo ip -n net0 link set link dev macvlan0 type macvlan macaddr add 9a:4b:11:18:00:5e
+sudo ip -d -n net0 link show macvlan0
+```
+
+```text
+4: macvlan0@veth0n: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 7e:d9:65:33:05:7d brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    macvlan mode source bcqueuelen 1000 usedbcqueuelen 1000 remotes (1) 9a:4b:11:18:00:5e addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に maclvan0 の MAC アドレスを登録する。
+
+```sh
+sudo ip -n net1 link set link dev macvlan1 type macvlan macaddr add 7e:d9:65:33:05:7d
+sudo ip -d -n net1 link show macvlan1
+```
+
+```text
+4: macvlan1@veth1n: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 9a:4b:11:18:00:5e brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535
+    macvlan mode source bcqueuelen 1000 usedbcqueuelen 1000 remotes (1) 7e:d9:65:33:05:7d addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.069ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.069/0.069/0.069/0.000 ms
+```
+
 ## 参考
 
 - [iproute2](https://github.com/iproute2)
 - [Predictable Network Interface Names](https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/)
+- [Introduction to Linux interfaces for virtual networking](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking)
+- [IPVLAN Driver HOWTO](https://docs.kernel.org/networking/ipvlan.html)
