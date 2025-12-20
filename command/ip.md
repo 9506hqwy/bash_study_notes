@@ -1614,9 +1614,490 @@ PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
 rtt min/avg/max/mdev = 0.069/0.069/0.069/0.000 ms
 ```
 
+## トンネル ipip / sit
+
+IP over IPv4 トンネルを作成する。
+
+`ipip` は IPv4 パケットをカプセル化する。
+`sit` は `mode` で IPv4, IPv6, MPLS などカプセル化するパケットを選択する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に ipip デバイスを作成する。
+
+```sh
+sudo ip -n net0 link add name ipip0 type ipip local 10.0.0.1 remote 10.0.0.2
+sudo ip -d -n net0 link show ipip0
+```
+
+```text
+4: ipip0@NONE: <POINTOPOINT,NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ipip 10.0.0.1 peer 10.0.0.2 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0
+    ipip any remote 10.0.0.2 local 10.0.0.1 ttl inherit pmtudisc addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に ipip デバイスを作成する。
+
+```sh
+sudo ip -n net1 link add name ipip0 type ipip local 10.0.0.2 remote 10.0.0.1
+sudo ip -d -n net1 link show ipip0
+```
+
+```text
+4: ipip0@NONE: <POINTOPOINT,NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ipip 10.0.0.2 peer 10.0.0.1 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0
+    ipip any remote 10.0.0.1 local 10.0.0.2 ttl inherit pmtudisc addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev ipip0
+sudo ip -n net0 link set dev ipip0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev ipip0
+sudo ip -n net1 link set dev ipip0 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.050ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.050/0.050/0.050/0.000 ms
+```
+
+`tcpdump` でパケットを確認する。`10.0.1.1 > 10.0.1.2` が設定されている。
+
+```sh
+sudo ip netns exec net1 tcpdump -c 1 -nel -i veth1n
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth1n, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:40:08.269237 52:b1:44:b3:df:8d > 9a:4c:40:d0:1a:c7, ethertype IPv4 (0x0800), length 118: 10.0.0.1 > 10.0.0.2: 10.0.1.1 > 10.0.1.2: ICMP echo request, id 2039, seq 1, length 64
+1 packet captured
+2 packets received by filter
+0 packets dropped by kernel
+```
+
+## トンネル ip6tnl
+
+IP over IPv6 トンネルを作成する。
+
+## トンネル VTI / VTI6
+
+xfrm を利用して IPSec トンネルを作成する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に vti デバイスを作成する。
+
+```sh
+sudo ip -n net0 link add name vti0 type vti key 1 local 10.0.0.1 remote 10.0.0.2
+sudo ip -d -n net0 link show vti0
+```
+
+```text
+6: vti0@NONE: <POINTOPOINT,NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ipip 10.0.0.1 peer 10.0.0.2 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0
+    vti remote 10.0.0.2 local 10.0.0.1 ikey 0.0.0.1 okey 0.0.0.1 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に vti デバイスを作成する。
+
+```sh
+sudo ip -n net1 link add name vti0 type vti key 1 local 10.0.0.2 remote 10.0.0.1
+sudo ip -d -n net1 link show vti0
+```
+
+```text
+6: vti0@NONE: <POINTOPOINT,NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ipip 10.0.0.2 peer 10.0.0.1 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0
+    vti remote 10.0.0.1 local 10.0.0.2 ikey 0.0.0.1 okey 0.0.0.1 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev vti0
+sudo ip -n net0 link set dev vti0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev vti0
+sudo ip -n net1 link set dev vti0 up
+```
+
+名前空間 net0 に IPSec のセキュリティアソシエーションを作成する。
+
+```sh
+SHA256_KEY=$(cat /dev/random | tr -dc 'a-f0-9' | head -c 64)
+AES_KEY=$(cat /dev/random | tr -dc 'a-f0-9' | head -c 64)
+
+sudo ip -n net0 xfrm state add src 10.0.0.1 dst 10.0.0.2 proto esp spi 1 enc aes "0x${AES_KEY}" auth sha256 "0x${SHA256_KEY}" mode tunnel
+sudo ip -n net0 xfrm state add src 10.0.0.2 dst 10.0.0.1 proto esp spi 1 enc aes "0x${AES_KEY}" auth sha256 "0x${SHA256_KEY}" mode tunnel
+sudo ip -n net0 xfrm state show
+```
+
+```text
+src 10.0.0.2 dst 10.0.0.1
+        proto esp spi 0x00000001 reqid 0 mode tunnel
+        replay-window 0
+        auth-trunc hmac(sha256) 0xa86503051e42234390fe1d8653e8e628c4ce7746a9f27d910e3d8c65115f5d24 96
+        enc cbc(aes) 0xa5c8a9f7cd9890bf9b72a03216c6f906794c0daa6ad849b1a1a269f04bea6d65
+        anti-replay context: seq 0x0, oseq 0x0, bitmap 0x00000000
+        sel src 0.0.0.0/0 dst 0.0.0.0/0
+src 10.0.0.1 dst 10.0.0.2
+        proto esp spi 0x00000001 reqid 0 mode tunnel
+        replay-window 0
+        auth-trunc hmac(sha256) 0xa86503051e42234390fe1d8653e8e628c4ce7746a9f27d910e3d8c65115f5d24 96
+        enc cbc(aes) 0xa5c8a9f7cd9890bf9b72a03216c6f906794c0daa6ad849b1a1a269f04bea6d65
+        lastused 2025-12-20 11:41:09
+        anti-replay context: seq 0x0, oseq 0x1, bitmap 0x00000000
+        sel src 0.0.0.0/0 dst 0.0.0.0/0
+```
+
+名前空間 net1 に IPSec のセキュリティアソシエーションを作成する。
+
+```sh
+sudo ip -n net1 xfrm state add src 10.0.0.2 dst 10.0.0.1 proto esp spi 1 enc aes "0x${AES_KEY}" auth sha256 "0x${SHA256_KEY}" mode tunnel
+sudo ip -n net1 xfrm state add src 10.0.0.1 dst 10.0.0.2 proto esp spi 1 enc aes "0x${AES_KEY}" auth sha256 "0x${SHA256_KEY}" mode tunnel
+sudo ip -n net1 xfrm state show
+```
+
+```text
+src 10.0.0.1 dst 10.0.0.2
+        proto esp spi 0x00000001 reqid 0 mode tunnel
+        replay-window 0
+        auth-trunc hmac(sha256) 0xa86503051e42234390fe1d8653e8e628c4ce7746a9f27d910e3d8c65115f5d24 96
+        enc cbc(aes) 0xa5c8a9f7cd9890bf9b72a03216c6f906794c0daa6ad849b1a1a269f04bea6d65
+        anti-replay context: seq 0x0, oseq 0x0, bitmap 0x00000000
+        sel src 0.0.0.0/0 dst 0.0.0.0/0
+src 10.0.0.2 dst 10.0.0.1
+        proto esp spi 0x00000001 reqid 0 mode tunnel
+        replay-window 0
+        auth-trunc hmac(sha256) 0xa86503051e42234390fe1d8653e8e628c4ce7746a9f27d910e3d8c65115f5d24 96
+        enc cbc(aes) 0xa5c8a9f7cd9890bf9b72a03216c6f906794c0daa6ad849b1a1a269f04bea6d65
+        anti-replay context: seq 0x0, oseq 0x0, bitmap 0x00000000
+        sel src 0.0.0.0/0 dst 0.0.0.0/0
+```
+
+名前空間 net0 に IPSec のトンネリングポリシーを作成する。
+
+```sh
+sudo ip -n net0 xfrm policy add dir in tmpl src 10.0.0.2 dst 10.0.0.1 proto esp spi 1 mode tunnel mark 1
+sudo ip -n net0 xfrm policy add dir out tmpl src 10.0.0.1 dst 10.0.0.2 proto esp spi 1 mode tunnel mark 1
+sudo ip -n net0 xfrm policy show
+```
+
+```text
+src 0.0.0.0/0 dst 0.0.0.0/0
+        dir out priority 0 ptype main
+        mark 0x1/0xffffffff
+        tmpl src 10.0.0.1 dst 10.0.0.2
+                proto esp spi 0x00000001 reqid 0 mode tunnel
+src 0.0.0.0/0 dst 0.0.0.0/0
+        dir in priority 0 ptype main
+        mark 0x1/0xffffffff
+        tmpl src 10.0.0.2 dst 10.0.0.1
+                proto esp spi 0x00000001 reqid 0 mode tunnel
+```
+
+名前空間 net1 に IPSec のトンネリングポリシーを作成する。
+
+```sh
+sudo ip -n net1 xfrm policy add dir in tmpl src 10.0.0.1 dst 10.0.0.2 proto esp spi 1 mode tunnel mark 1
+sudo ip -n net1 xfrm policy add dir out tmpl src 10.0.0.2 dst 10.0.0.1 proto esp spi 1 mode tunnel mark 1
+sudo ip -n net1 xfrm policy show
+```
+
+```text
+src 0.0.0.0/0 dst 0.0.0.0/0
+        dir out priority 0 ptype main
+        mark 0x1/0xffffffff
+        tmpl src 10.0.0.2 dst 10.0.0.1
+                proto esp spi 0x00000001 reqid 0 mode tunnel
+src 0.0.0.0/0 dst 0.0.0.0/0
+        dir in priority 0 ptype main
+        mark 0x1/0xffffffff
+        tmpl src 10.0.0.1 dst 10.0.0.2
+                proto esp spi 0x00000001 reqid 0 mode tunnel
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.078ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.078/0.078/0.078/0.000 ms
+```
+
+`tcpdump` でパケットを確認する。ESP が設定されている。
+
+```sh
+sudo ip netns exec net1 tcpdump -c 1 -nel -i veth1n
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth1n, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+11:51:51.286928 52:b1:44:b3:df:8d > 9a:4c:40:d0:1a:c7, ethertype IPv4 (0x0800), length 166: 10.0.0.1 > 10.0.0.2: ESP(spi=0x00000001,seq=0x3), length 132
+1 packet captured
+2 packets received by filter
+0 packets dropped by kernel
+```
+
+## トンネル GRE
+
+Layer3 over IPv4 トンネルを作成する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に gre デバイスを作成する。`gre0` は Linux カーネルが使用する。
+
+```sh
+sudo ip -n net0 link add gre1 type gre key 1 local 10.0.0.1 remote 10.0.0.2
+sudo ip -d -n net0 link show gre1
+```
+
+```text
+6: gre1@NONE: <POINTOPOINT,NOARP> mtu 1472 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/gre 10.0.0.1 peer 10.0.0.2 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0
+    gre remote 10.0.0.2 local 10.0.0.1 ttl inherit ikey 0.0.0.1 okey 0.0.0.1 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に gre デバイスを作成する。`gre0` は Linux カーネルが使用する。
+
+```sh
+sudo ip -n net1 link add gre1 type gre key 1 local 10.0.0.2 remote 10.0.0.1
+sudo ip -d -n net1 link show gre1
+```
+
+```text
+6: gre1@NONE: <POINTOPOINT,NOARP> mtu 1472 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/gre 10.0.0.2 peer 10.0.0.1 promiscuity 0 allmulti 0 minmtu 0 maxmtu 0
+    gre remote 10.0.0.1 local 10.0.0.2 ttl inherit ikey 0.0.0.1 okey 0.0.0.1 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev gre1
+sudo ip -n net0 link set dev gre1 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev gre1
+sudo ip -n net1 link set dev gre1 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.046ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.046/0.046/0.046/0.000 ms
+```
+
+`tcpdump` でパケットを確認する。GREv0 が設定されている。
+
+```sh
+sudo ip netns exec net1 tcpdump -c 1 -nel -i veth1n
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth1n, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:00:13.014951 c2:27:a3:98:7b:40 > aa:56:91:a5:31:2a, ethertype IPv4 (0x0800), length 126: 10.0.0.1 > 10.0.0.2: GREv0, key=0x1, proto IPv4 (0x0800), length 92: 10.0.1.1 > 10.0.1.2: ICMP echo request, id 2035, seq 1, length 64
+1 packet captured
+2 packets received by filter
+0 packets dropped by kernel
+```
+
+## トンネル GRETAP
+
+Layer2 over IPv4 トンネルを作成する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に gretap デバイスを作成する。`gre0` は Linux カーネルが使用する。
+
+```sh
+sudo ip -n net0 link add gre1 type gretap key 1 local 10.0.0.1 remote 10.0.0.2
+sudo ip -d -n net0 link show gre1
+```
+
+```text
+7: gre1@NONE: <BROADCAST,MULTICAST> mtu 1458 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether c2:a9:8e:12:a9:d2 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 0
+    gretap remote 10.0.0.2 local 10.0.0.1 ttl inherit ikey 0.0.0.1 okey 0.0.0.1 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に gretap デバイスを作成する。`gre0` は Linux カーネルが使用する。
+
+```sh
+sudo ip -n net1 link add gre1 type gretap key 1 local 10.0.0.2 remote 10.0.0.1
+sudo ip -d -n net1 link show gre1
+```
+
+```text
+7: gre1@NONE: <BROADCAST,MULTICAST> mtu 1458 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 9a:ff:1e:ed:56:10 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 0
+    gretap remote 10.0.0.1 local 10.0.0.2 ttl inherit ikey 0.0.0.1 okey 0.0.0.1 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev gre1
+sudo ip -n net0 link set dev gre1 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev gre1
+sudo ip -n net1 link set dev gre1 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.044ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.044/0.044/0.044/0.000 ms
+```
+
+`tcpdump` でパケットを確認する。GREv0 が設定されている。
+
+```sh
+sudo ip netns exec net1 tcpdump -c 1 -nel -i veth1n
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth1n, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:08:01.688847 c2:27:a3:98:7b:40 > aa:56:91:a5:31:2a, ethertype IPv4 (0x0800), length 140: 10.0.0.1 > 10.0.0.2: GREv0, key=0x1, proto TEB (0x6558), length 106: c2:a9:8e:12:a9:d2 > 9a:ff:1e:ed:56:10, ethertype IPv4 (0x0800), length 98: 10.0.1.1 > 10.0.1.2: ICMP echo request, id 2257, seq 1, length 64
+1 packet captured
+2 packets received by filter
+0 packets dropped by kernel
+```
+
+## トンネル IP6GRE
+
+Layer3 over IPv6 トンネルを作成する。
+
+## トンネル IP6GRETAP
+
+Layer2 over IPv6 トンネルを作成する。
+
+## トンネル GENEVE
+
+Layer2 over UDP トンネルを作成する。
+
+[BRIDGE デバイス](#bridge-デバイス) を作成済みとする。
+
+名前空間 net0 に geneve デバイスを作成する。
+
+```sh
+sudo ip -n net0 link add geneve0 type geneve id 1 remote 10.0.0.2
+sudo ip -d -n net0 link show geneve0
+```
+
+```text
+8: geneve0: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 92:5c:e1:b9:27:75 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65485
+    geneve id 1 remote 10.0.0.2 ttl auto dstport 6081 noudpcsum udp6zerocsumrx addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+名前空間 net1 に geneve デバイスを作成する。
+
+```sh
+sudo ip -n net1 link add geneve0 type geneve id 1 remote 10.0.0.1
+sudo ip -d -n net1 link show geneve0
+```
+
+```text
+8: geneve0: <BROADCAST,MULTICAST> mtu 1450 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 0a:11:aa:11:f0:92 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65485
+    geneve id 1 remote 10.0.0.1 ttl auto dstport 6081 noudpcsum udp6zerocsumrx addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536
+```
+
+アドレスを割り当てて有効化する。
+
+```sh
+sudo ip -n net0 addr add 10.0.1.1/24 dev geneve0
+sudo ip -n net0 link set dev geneve0 up
+
+sudo ip -n net1 addr add 10.0.1.2/24 dev geneve0
+sudo ip -n net1 link set dev geneve0 up
+```
+
+疎通を確認する。
+
+```sh
+sudo ip netns exec net0 ping -c 1 10.0.1.2
+```
+
+```text
+PING 10.0.1.2 (10.0.1.2) 56(84) バイトのデータ
+64 バイト応答 送信元 10.0.1.2: icmp_seq=1 ttl=64 時間=0.062ミリ秒
+
+--- 10.0.1.2 ping 統計 ---
+送信パケット数 1, 受信パケット数 1, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.062/0.062/0.062/0.000 ms
+```
+
+`tcpdump` でパケットを確認する。Geneve が設定されている。
+
+```sh
+sudo ip netns exec net1 tcpdump -c 1 -nel -i veth1n
+```
+
+```text
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on veth1n, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:22:28.727692 c2:27:a3:98:7b:40 > aa:56:91:a5:31:2a, ethertype IPv4 (0x0800), length 92: 10.0.0.1.47204 > 10.0.0.2.geneve: Geneve, Flags [none], vni 0x1, proto TEB (0x6558): 92:5c:e1:b9:27:75 > Broadcast, ethertype ARP (0x0806), length 42: Request who-has 10.0.1.2 tell 10.0.1.1, length 28
+1 packet captured
+4 packets received by filter
+0 packets dropped by kernel
+```
+
+## トンネル ERSPAN
+
+ミラーリングしたパケットを GRE でカプセル化するトンネルを作成する。
+
 ## 参考
 
 - [iproute2](https://github.com/iproute2)
 - [Predictable Network Interface Names](https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/)
 - [Introduction to Linux interfaces for virtual networking](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking)
 - [IPVLAN Driver HOWTO](https://docs.kernel.org/networking/ipvlan.html)
+- [An introduction to Linux virtual interfaces: Tunnels](https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels)
