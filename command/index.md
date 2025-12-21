@@ -12,6 +12,7 @@ firewalld
 gpg
 ip
 jq
+nmcli
 openssl
 paste
 sed
