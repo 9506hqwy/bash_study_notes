@@ -14,6 +14,7 @@ ip
 jq
 nmcli
 openssl
+parted
 paste
 sed
 selinux
