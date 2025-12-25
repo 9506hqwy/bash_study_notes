@@ -12,6 +12,7 @@ firewalld
 gpg
 ip
 jq
+lvm
 nmcli
 openssl
 parted
