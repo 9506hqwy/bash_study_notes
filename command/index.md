@@ -13,6 +13,7 @@ gpg
 ip
 jq
 lvm
+nft
 nmcli
 openssl
 parted
