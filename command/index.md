@@ -15,6 +15,7 @@ jq
 lvm
 nft
 nmcli
+openldap
 openssl
 parted
 paste
